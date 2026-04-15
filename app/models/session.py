@@ -2,7 +2,12 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from app.models.database import Base
 from app.config import settings
 
-engine = create_async_engine(settings.database_url, echo=False, pool_size=5, max_overflow=10)
+# Railway provides postgresql:// — we need postgresql+asyncpg://
+db_url = settings.database_url
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+engine = create_async_engine(db_url, echo=False, pool_size=5, max_overflow=10)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
