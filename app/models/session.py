@@ -3,9 +3,11 @@ from app.models.database import Base
 from app.config import settings
 
 # Railway provides postgresql:// — we need postgresql+asyncpg://
+# Also convert sslmode= to ssl= since asyncpg doesn't accept sslmode
 db_url = settings.database_url
 if db_url.startswith("postgresql://"):
     db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+db_url = db_url.replace("sslmode=", "ssl=")
 
 engine = create_async_engine(db_url, echo=False, pool_size=5, max_overflow=10)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
