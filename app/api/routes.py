@@ -35,6 +35,7 @@ async def add_channel(
     handle: str = None,
     category: str = "uap",
     priority: int = 5,
+    credibility: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
 ):
     """Add a channel to the watch list."""
@@ -67,6 +68,7 @@ async def add_channel(
             video_count=info["video_count"],
             category=category,
             priority=priority,
+            credibility=credibility,
         )
         session.add(channel)
         await session.commit()
@@ -99,6 +101,7 @@ async def list_channels(session: AsyncSession = Depends(get_session)):
                 "name": ch.name,
                 "category": ch.category,
                 "priority": ch.priority,
+                "credibility": ch.credibility,
                 "subscribers": ch.subscriber_count,
                 "videos": ch.video_count,
                 "active": ch.active,
@@ -115,6 +118,7 @@ async def update_channel(
     priority: Optional[int] = None,
     category: Optional[str] = None,
     active: Optional[bool] = None,
+    credibility: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
 ):
     """Update channel settings."""
@@ -131,6 +135,8 @@ async def update_channel(
         channel.category = category
     if active is not None:
         channel.active = active
+    if credibility is not None:
+        channel.credibility = credibility
 
     await session.commit()
     return {"status": "updated", "channel_id": channel_id}
