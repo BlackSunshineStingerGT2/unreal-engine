@@ -33,7 +33,6 @@ async def add_subreddit(
     subreddit_name: str,
     category: str = "uap",
     priority: int = 5,
-    credibility: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
 ):
     """Add a subreddit to the watch list."""
@@ -59,7 +58,6 @@ async def add_subreddit(
             subscriber_count=info["subscriber_count"],
             category=category,
             priority=priority,
-            credibility=credibility,
         )
         session.add(sub)
         await session.commit()
@@ -91,7 +89,6 @@ async def list_subreddits(session: AsyncSession = Depends(get_session)):
                 "display_name": s.display_name,
                 "category": s.category,
                 "priority": s.priority,
-                "credibility": s.credibility,
                 "subscribers": s.subscriber_count,
                 "active": s.active,
                 "last_checked": s.last_checked.isoformat() if s.last_checked else None,
@@ -107,7 +104,6 @@ async def update_subreddit(
     priority: Optional[int] = None,
     category: Optional[str] = None,
     active: Optional[bool] = None,
-    credibility: Optional[int] = None,
     session: AsyncSession = Depends(get_session),
 ):
     """Update subreddit settings."""
@@ -124,8 +120,6 @@ async def update_subreddit(
         sub.category = category
     if active is not None:
         sub.active = active
-    if credibility is not None:
-        sub.credibility = credibility
 
     await session.commit()
     return {"status": "updated", "subreddit_name": subreddit_name}

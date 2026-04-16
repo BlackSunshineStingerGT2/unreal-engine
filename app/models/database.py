@@ -24,7 +24,6 @@ class Channel(Base):
     video_count = Column(Integer, default=0)
     category = Column(String(64), default="uap")  # uap, disclosure, science, etc.
     priority = Column(Integer, default=5)  # 1-10, higher = check more often
-    credibility = Column(Integer, nullable=True)  # 1-10, editorial trust score
     active = Column(Boolean, default=True)
     last_checked = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
@@ -193,7 +192,6 @@ class Subreddit(Base):
     subscriber_count = Column(BigInteger, default=0)
     category = Column(String(64), default="uap")
     priority = Column(Integer, default=5)
-    credibility = Column(Integer, nullable=True)
     active = Column(Boolean, default=True)
     last_checked = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utcnow)
