@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     max_comments_per_video: int = 500
     transcript_language: str = "en"
 
+    # Reddit
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_user_agent: str = "UnrealEngine/1.0 (UAP Intelligence Pipeline)"
+    reddit_polling_interval_minutes: int = 15
+
     # Auth
     pipeline_token: str = ""
 

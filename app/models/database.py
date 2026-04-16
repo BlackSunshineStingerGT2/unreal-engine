@@ -176,3 +176,115 @@ class PipelineLog(Base):
     __table_args__ = (
         Index("ix_pipeline_logs_action_time", "action", "created_at"),
     )
+
+
+# ==========================================================================
+# Reddit models (Phase 2)
+# ==========================================================================
+
+class Subreddit(Base):
+    """Subreddit watch list — mirrors Channel for Reddit."""
+    __tablename__ = "rd_subreddits"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    subreddit_name = Column(String(128), unique=True, nullable=False, index=True)
+    display_name = Column(String(256), nullable=False)
+    description = Column(Text, default="")
+    subscriber_count = Column(BigInteger, default=0)
+    category = Column(String(64), default="uap")
+    priority = Column(Integer, default=5)
+    credibility = Column(Integer, nullable=True)
+    active = Column(Boolean, default=True)
+    last_checked = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    posts = relationship("RedditPost", back_populates="subreddit", cascade="all, delete-orphan")
+
+
+class RedditPost(Base):
+    """Individual Reddit post record."""
+    __tablename__ = "rd_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(16), unique=True, nullable=False, index=True)
+    subreddit_name = Column(String(128), ForeignKey("rd_subreddits.subreddit_name"), nullable=False)
+    title = Column(String(512), nullable=False)
+    author = Column(String(128), default="[deleted]")
+    selftext = Column(Text, default="")
+    url = Column(String(1024), default="")
+    permalink = Column(String(512), default="")
+    post_type = Column(String(32), default="self")  # self, link, image, video, crosspost
+    flair = Column(String(128), default="")
+    score = Column(Integer, default=0)
+    upvote_ratio = Column(Float, default=0.0)
+    num_comments = Column(Integer, default=0)
+    published_at = Column(DateTime, nullable=False)
+
+    # Processing state
+    comments_collected = Column(Boolean, default=False)
+    analysis_complete = Column(Boolean, default=False)
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    subreddit = relationship("Subreddit", back_populates="posts")
+    comments = relationship("RedditComment", back_populates="post", cascade="all, delete-orphan")
+    analysis = relationship("RedditPostAnalysis", back_populates="post", uselist=False, cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("ix_rd_posts_published", "published_at"),
+        Index("ix_rd_posts_subreddit_published", "subreddit_name", "published_at"),
+    )
+
+
+class RedditComment(Base):
+    """Reddit comment — top-level and replies."""
+    __tablename__ = "rd_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    comment_id = Column(String(16), unique=True, nullable=False, index=True)
+    post_id = Column(String(16), ForeignKey("rd_posts.post_id"), nullable=False)
+    parent_comment_id = Column(String(16), nullable=True)
+    author = Column(String(128), default="[deleted]")
+    body = Column(Text, nullable=False)
+    score = Column(Integer, default=0)
+    is_op = Column(Boolean, default=False)
+    published_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utcnow)
+
+    post = relationship("RedditPost", back_populates="comments")
+
+    __table_args__ = (
+        Index("ix_rd_comments_post", "post_id"),
+        Index("ix_rd_comments_score", "post_id", "score"),
+    )
+
+
+class RedditPostAnalysis(Base):
+    """LLM-generated analysis of a Reddit post."""
+    __tablename__ = "rd_post_analysis"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(String(16), ForeignKey("rd_posts.post_id"), unique=True, nullable=False)
+
+    topics = Column(JSON, default=list)
+    entities = Column(JSON, default=list)
+    claims = Column(JSON, default=list)
+    questions_raised = Column(JSON, default=list)
+
+    sentiment_score = Column(Float, default=0.0)
+    information_density = Column(Float, default=0.0)
+    community_heat = Column(Float, default=0.0)
+
+    research_directives = Column(JSON, default=list)
+    related_post_ids = Column(JSON, default=list)
+
+    summary = Column(Text, default="")
+    model_used = Column(String(64), default="claude-sonnet-4-20250514")
+    tokens_used = Column(Integer, default=0)
+
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    post = relationship("RedditPost", back_populates="analysis")

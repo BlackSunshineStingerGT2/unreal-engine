@@ -6,6 +6,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from app.models.session import init_db
 from app.api.routes import router, pipeline
+from app.api.reddit_routes import reddit_router
 from app.config import settings
 
 logging.basicConfig(
@@ -18,12 +19,21 @@ scheduler = AsyncIOScheduler()
 
 
 async def scheduled_pipeline_run():
-    """Scheduled full pipeline cycle."""
+    """Scheduled full YouTube pipeline cycle."""
     try:
         results = await pipeline.run_full_cycle()
         logger.info(f"Scheduled pipeline run complete: {results}")
     except Exception as e:
         logger.error(f"Scheduled pipeline run failed: {e}")
+
+
+async def scheduled_reddit_run():
+    """Scheduled Reddit pipeline cycle."""
+    try:
+        results = await pipeline.run_reddit_cycle()
+        logger.info(f"Scheduled Reddit pipeline run complete: {results}")
+    except Exception as e:
+        logger.error(f"Scheduled Reddit pipeline run failed: {e}")
 
 
 @asynccontextmanager
@@ -41,8 +51,18 @@ async def lifespan(app: FastAPI):
         id="pipeline_cycle",
         name="Full Pipeline Cycle",
     )
+    scheduler.add_job(
+        scheduled_reddit_run,
+        "interval",
+        minutes=settings.reddit_polling_interval_minutes,
+        id="reddit_pipeline_cycle",
+        name="Reddit Pipeline Cycle",
+    )
     scheduler.start()
-    logger.info(f"Scheduler started (interval: {settings.polling_interval_minutes}min)")
+    logger.info(
+        f"Scheduler started (YT: {settings.polling_interval_minutes}min, "
+        f"Reddit: {settings.reddit_polling_interval_minutes}min)"
+    )
 
     yield
 
@@ -68,13 +88,14 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(reddit_router)
 
 
 @app.get("/health")
 async def health():
     return {
         "status": "alive",
-        "service": "yt-pipeline",
+        "service": "unreal-engine",
         "scheduler_running": scheduler.running,
     }
 
@@ -82,7 +103,8 @@ async def health():
 @app.get("/")
 async def root():
     return {
-        "name": "YouTube Intelligence Pipeline",
-        "codename": "Unreal Engine v1",
+        "name": "Community Intelligence Pipeline",
+        "codename": "Unreal Engine v2",
         "status": "operational",
+        "sources": ["youtube", "reddit"],
     }
