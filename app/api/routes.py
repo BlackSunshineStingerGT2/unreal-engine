@@ -80,6 +80,10 @@ async def add_channel(
                 "videos": info["video_count"],
             }
         }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Failed to add channel: {str(e)}")
     finally:
         await yt.close()
 

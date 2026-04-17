@@ -12,12 +12,17 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-REDDIT_BASE = "https://www.reddit.com"
+REDDIT_BASE = "https://old.reddit.com"
 
 
 class RedditService:
     def __init__(self):
-        self.user_agent = settings.reddit_user_agent
+        # Use a browser-like user agent — Reddit blocks bot-like agents on .json
+        self.user_agent = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 "
+            "UnrealEngine/1.0"
+        )
         self.client = httpx.AsyncClient(
             timeout=30.0,
             headers={"User-Agent": self.user_agent},
