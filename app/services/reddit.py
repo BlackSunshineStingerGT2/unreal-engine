@@ -12,20 +12,22 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-REDDIT_BASE = "https://old.reddit.com"
+REDDIT_BASE = "https://www.reddit.com"
 
 
 class RedditService:
     def __init__(self):
-        # Use a browser-like user agent — Reddit blocks bot-like agents on .json
+        # Reddit requires a descriptive user agent for API-like access
+        # See: https://github.com/reddit-archive/reddit/wiki/API
         self.user_agent = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-            "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 "
-            "UnrealEngine/1.0"
+            "python:unreal-engine:v2.0 (by /u/OB1Shanobi)"
         )
         self.client = httpx.AsyncClient(
             timeout=30.0,
-            headers={"User-Agent": self.user_agent},
+            headers={
+                "User-Agent": self.user_agent,
+                "Accept": "application/json",
+            },
             follow_redirects=True,
         )
 
