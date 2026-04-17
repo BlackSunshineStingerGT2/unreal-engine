@@ -9,7 +9,7 @@ Base = declarative_base()
 
 
 def utcnow():
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Channel(Base):
