@@ -349,7 +349,7 @@ async def get_trending_topics(
     session: AsyncSession = Depends(get_session),
 ):
     """Get trending topics across all analyzed videos."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
 
     result = await session.execute(
         select(VideoAnalysis, Video)
@@ -382,7 +382,7 @@ async def get_research_directives(
     session: AsyncSession = Depends(get_session),
 ):
     """Get aggregated research directives from recent analyses."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
 
     result = await session.execute(
         select(VideoAnalysis)

@@ -327,7 +327,7 @@ async def get_trending_topics(
     session: AsyncSession = Depends(get_session),
 ):
     """Get trending topics across analyzed Reddit posts."""
-    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
 
     result = await session.execute(
         select(RedditPostAnalysis, RedditPost)

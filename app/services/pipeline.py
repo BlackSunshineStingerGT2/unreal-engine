@@ -1,8 +1,18 @@
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
+
+
+def utcnow_naive():
+    """Return current UTC time as a naive datetime (no tzinfo)."""
+    return utcnow_naive().replace(tzinfo=None)
+
+
+def from_utc_timestamp(ts: float):
+    """Convert a UTC timestamp to a naive datetime."""
+    return datetime.fromtimestamp(ts, tz=timezone.utc).replace(tzinfo=None)
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,7 +60,7 @@ class Pipeline:
             # Update channel stats
             channel.subscriber_count = info["subscriber_count"]
             channel.video_count = info["video_count"]
-            channel.last_checked = datetime.now(timezone.utc)
+            channel.last_checked = utcnow_naive()
 
             # Get latest videos
             uploads_playlist = info["uploads_playlist"]
@@ -78,7 +88,7 @@ class Pipeline:
                             description=details["description"],
                             published_at=datetime.fromisoformat(
                                 details["published_at"].replace("Z", "+00:00")
-                            ),
+                            ).replace(tzinfo=None),
                             duration_seconds=details["duration_seconds"],
                             tags=details.get("tags", []),
                             thumbnail_url=details.get("thumbnail_url", ""),
@@ -88,7 +98,7 @@ class Pipeline:
 
                         # Create initial engagement snapshot
                         hours_since = (
-                            datetime.now(timezone.utc) - video.published_at
+                            utcnow_naive() - video.published_at
                         ).total_seconds() / 3600
                         snapshot = EngagementSnapshot(
                             video_id=details["video_id"],
@@ -210,7 +220,7 @@ class Pipeline:
                         reply_count=c.get("reply_count", 0),
                         published_at=datetime.fromisoformat(
                             c["published_at"].replace("Z", "+00:00")
-                        ) if c.get("published_at") else None,
+                        ).replace(tzinfo=None) if c.get("published_at") else None,
                         is_creator_reply=c.get("is_creator_reply", False),
                     )
                     session.add(comment)
@@ -243,7 +253,7 @@ class Pipeline:
                 return False
 
             hours_since = (
-                datetime.now(timezone.utc) - video.published_at
+                utcnow_naive() - video.published_at
             ).total_seconds() / 3600
 
             snapshot = EngagementSnapshot(
@@ -388,8 +398,7 @@ class Pipeline:
                 await asyncio.sleep(2)  # Rate limit LLM calls
 
             # 5. Take engagement snapshots for recent videos (< 7 days)
-            from datetime import timedelta
-            cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+            cutoff = utcnow_naive() - timedelta(days=7)
             recent = await session.execute(
                 select(Video).where(Video.published_at > cutoff)
             )
@@ -416,7 +425,7 @@ class Pipeline:
             if info:
                 subreddit.subscriber_count = info["subscriber_count"]
 
-            subreddit.last_checked = datetime.now(timezone.utc)
+            subreddit.last_checked = utcnow_naive()
 
             # Get latest posts
             raw_posts = await self.reddit.get_new_posts(subreddit.subreddit_name, limit=25)
@@ -446,9 +455,7 @@ class Pipeline:
                         score=p.get("score", 0),
                         upvote_ratio=p.get("upvote_ratio", 0.0),
                         num_comments=p.get("num_comments", 0),
-                        published_at=datetime.fromtimestamp(
-                            p["created_utc"], tz=timezone.utc
-                        ),
+                        published_at=from_utc_timestamp(p["created_utc"]),
                     )
                     session.add(post)
                     new_posts.append(p)
@@ -516,9 +523,7 @@ class Pipeline:
                         body=c.get("body", ""),
                         score=c.get("score", 0),
                         is_op=c.get("is_op", False),
-                        published_at=datetime.fromtimestamp(
-                            c["created_utc"], tz=timezone.utc
-                        ) if c.get("created_utc") else None,
+                        published_at=from_utc_timestamp(c["created_utc"]) if c.get("created_utc") else None,
                     )
                     session.add(comment)
                     count += 1
