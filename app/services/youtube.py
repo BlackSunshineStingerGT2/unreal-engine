@@ -56,29 +56,57 @@ class YouTubeService:
         }
 
     async def get_channel_by_handle(self, handle: str) -> Optional[dict]:
-        """Lookup channel by @handle."""
-        resp = await self.client.get(
-            f"{BASE_URL}/channels",
-            params=self._params(
-                part="snippet,statistics,contentDetails",
-                forHandle=handle.lstrip("@")
-            )
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        items = data.get("items", [])
-        if not items:
-            return None
+        """Lookup channel by @handle. Tries forHandle first, falls back to search."""
+        clean_handle = handle.lstrip("@")
 
-        ch = items[0]
-        return {
-            "channel_id": ch["id"],
-            "name": ch["snippet"]["title"],
-            "description": ch["snippet"].get("description", ""),
-            "subscriber_count": int(ch["statistics"].get("subscriberCount", 0)),
-            "video_count": int(ch["statistics"].get("videoCount", 0)),
-            "uploads_playlist": ch["contentDetails"]["relatedPlaylists"]["uploads"],
-        }
+        # Try forHandle parameter first
+        try:
+            resp = await self.client.get(
+                f"{BASE_URL}/channels",
+                params=self._params(
+                    part="snippet,statistics,contentDetails",
+                    forHandle=clean_handle
+                )
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            items = data.get("items", [])
+            if items:
+                ch = items[0]
+                return {
+                    "channel_id": ch["id"],
+                    "name": ch["snippet"]["title"],
+                    "description": ch["snippet"].get("description", ""),
+                    "subscriber_count": int(ch["statistics"].get("subscriberCount", 0)),
+                    "video_count": int(ch["statistics"].get("videoCount", 0)),
+                    "uploads_playlist": ch["contentDetails"]["relatedPlaylists"]["uploads"],
+                }
+        except Exception as e:
+            logger.warning(f"forHandle lookup failed for {handle}: {e}")
+
+        # Fallback: search for the channel
+        try:
+            resp = await self.client.get(
+                f"{BASE_URL}/search",
+                params=self._params(
+                    part="snippet",
+                    q=f"@{clean_handle}",
+                    type="channel",
+                    maxResults=1
+                )
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            items = data.get("items", [])
+            if not items:
+                logger.error(f"Channel not found via search: {handle}")
+                return None
+
+            channel_id = items[0]["snippet"]["channelId"]
+            return await self.get_channel_info(channel_id)
+        except Exception as e:
+            logger.error(f"Channel search failed for {handle}: {e}")
+            return None
 
     async def get_latest_videos(
         self, uploads_playlist_id: str, max_results: int = 10
