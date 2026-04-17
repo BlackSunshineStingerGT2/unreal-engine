@@ -108,3 +108,47 @@ async def root():
         "status": "operational",
         "sources": ["youtube", "reddit"],
     }
+
+
+@app.get("/debug/connectivity")
+async def debug_connectivity():
+    """Test outbound connectivity to YouTube and Reddit APIs."""
+    import httpx
+    results = {}
+
+    # Test YouTube API key
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                "https://www.googleapis.com/youtube/v3/channels",
+                params={
+                    "key": settings.youtube_api_key,
+                    "part": "snippet",
+                    "forHandle": "YouTube",
+                }
+            )
+            results["youtube"] = {
+                "status": resp.status_code,
+                "has_items": len(resp.json().get("items", [])) > 0,
+                "error": resp.json().get("error", {}).get("message") if resp.status_code != 200 else None,
+                "api_key_set": bool(settings.youtube_api_key),
+                "api_key_prefix": settings.youtube_api_key[:8] + "..." if settings.youtube_api_key else "EMPTY",
+            }
+    except Exception as e:
+        results["youtube"] = {"error": str(e)}
+
+    # Test Reddit .json access
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(
+                "https://www.reddit.com/r/UFOs/about.json",
+                headers={"User-Agent": settings.reddit_user_agent},
+            )
+            results["reddit"] = {
+                "status": resp.status_code,
+                "has_data": "display_name" in resp.text[:500] if resp.status_code == 200 else False,
+            }
+    except Exception as e:
+        results["reddit"] = {"error": str(e)}
+
+    return results
