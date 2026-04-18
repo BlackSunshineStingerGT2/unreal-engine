@@ -153,3 +153,30 @@ async def debug_connectivity():
         results["reddit"] = {"error": str(e)}
 
     return results
+
+
+@app.get("/debug/test-poll")
+async def debug_test_poll():
+    """Test polling a single channel to diagnose errors."""
+    import traceback
+    from app.models.session import async_session
+    from app.models.database import Channel
+    from sqlalchemy import select
+
+    try:
+        async with async_session() as session:
+            result = await session.execute(
+                select(Channel).where(Channel.active == True).limit(1)
+            )
+            channel = result.scalar_one_or_none()
+            if not channel:
+                return {"error": "No channels found"}
+
+            info = await pipeline.youtube.get_channel_info(channel.channel_id)
+            return {
+                "channel": channel.name,
+                "channel_id": channel.channel_id,
+                "api_response": info,
+            }
+    except Exception as e:
+        return {"error": str(e), "traceback": traceback.format_exc()}

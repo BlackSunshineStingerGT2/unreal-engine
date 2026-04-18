@@ -29,6 +29,7 @@ class RedditService:
                 "Accept": "application/json",
             },
             follow_redirects=True,
+            max_redirects=5,
         )
 
     async def close(self):
