@@ -24,7 +24,8 @@ async def scheduled_pipeline_run():
         results = await pipeline.run_full_cycle()
         logger.info(f"Scheduled pipeline run complete: {results}")
     except Exception as e:
-        logger.error(f"Scheduled pipeline run failed: {e}")
+        import traceback
+        logger.error(f"Scheduled pipeline run failed: {e}\n{traceback.format_exc()}")
 
 
 async def scheduled_reddit_run():

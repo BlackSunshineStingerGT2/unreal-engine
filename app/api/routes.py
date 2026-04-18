@@ -165,8 +165,12 @@ async def remove_channel(
 @router.post("/pipeline/run", dependencies=[Depends(verify_token)])
 async def run_pipeline():
     """Trigger a full pipeline cycle."""
-    results = await pipeline.run_full_cycle()
-    return {"status": "complete", "results": results}
+    import traceback
+    try:
+        results = await pipeline.run_full_cycle()
+        return {"status": "complete", "results": results}
+    except Exception as e:
+        return {"status": "error", "detail": str(e), "traceback": traceback.format_exc()}
 
 
 @router.post("/pipeline/poll", dependencies=[Depends(verify_token)])
