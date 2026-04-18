@@ -7,7 +7,7 @@ from typing import Optional
 
 def utcnow_naive():
     """Return current UTC time as a naive datetime (no tzinfo)."""
-    return utcnow_naive().replace(tzinfo=None)
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def from_utc_timestamp(ts: float):
